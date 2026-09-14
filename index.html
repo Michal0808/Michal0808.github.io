@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meteo Stanice — Havířov</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #f0f4f8;
+    --surface:  #ffffff;
+    --card:     #ffffff;
+    --border:   #dde3ec;
+    --accent:   #0284c7;
+    --accent2:  #6366f1;
+    --green:    #059669;
+    --amber:    #d97706;
+    --red:      #dc2626;
+    --text:     #1e293b;
+    --muted:    #64748b;
+    --dim:      #cbd5e1;
+    --font-d:   'Space Mono', monospace;
+    --font-b:   'Space Grotesk', sans-serif;
+  }
+
+  html { font-size: 16px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-b);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ─────────────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(240,244,248,.92);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg,var(--accent),var(--accent2));
+    border-radius: 8px;
+    display: grid; place-items: center;
+    font-size: 1.1rem;
+  }
+  .logo h1 { font-size: 1.05rem; font-weight: 600; letter-spacing: -.02em; }
+  .logo span { font-size: .8rem; color: var(--muted); font-family: var(--font-d); }
+
+  .header-meta {
+    text-align: right;
+    font-family: var(--font-d);
+    font-size: .75rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .status-dot {
+    display: inline-block; width: 7px; height: 7px;
+    background: var(--green); border-radius: 50%;
+    margin-right: .35rem;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50% { opacity: .3; }
+  }
+
+  /* ── MAIN ─────────────────────────────────── */
+  main { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+  .section-label {
+    font-size: .7rem; font-family: var(--font-d);
+    color: var(--muted); letter-spacing: .12em; text-transform: uppercase;
+    margin-bottom: 1rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ── HERO ROW ─────────────────────────────── */
+  .hero-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  @media(max-width:900px){ .hero-row { grid-template-columns: 1fr 1fr; } }
+  @media(max-width:560px){ .hero-row { grid-template-columns: 1fr; } }
+
+  /* ── CARDS ─────────────────────────────────── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .25s, transform .2s, box-shadow .25s;
+    user-select: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+  }
+  .card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(2,132,199,.03), transparent 60%);
+    pointer-events: none;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(2,132,199,.14);
+  }
+  .card:hover .expand-hint { opacity: 1; }
+
+  .card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 1.25rem;
+  }
+  .card-label {
+    font-size: .72rem; font-family: var(--font-d);
+    color: var(--muted); letter-spacing: .1em; text-transform: uppercase;
+  }
+  .card-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: grid; place-items: center; font-size: 1rem;
+  }
+
+  .card-value {
+    font-family: var(--font-d);
+    font-size: 3rem; font-weight: 700;
+    line-height: 1;
+    letter-spacing: -.03em;
+    margin-bottom: .25rem;
+  }
+  .card-value sup { font-size: 1.2rem; vertical-align: super; opacity: .7; }
+  .card-sub {
+    font-size: .8rem; color: var(--muted); margin-bottom: 1rem;
+  }
+
+  /* sparkline mini */
+  .sparkline { width: 100%; height: 40px; }
+  .sparkline path { fill: none; }
+  .sparkline .area { stroke: none; }
+
+  .expand-hint {
+    position: absolute; bottom: .75rem; right: 1rem;
+    font-size: .65rem; font-family: var(--font-d);
+    color: var(--accent); opacity: 0;
+    transition: opacity .2s;
+    letter-spacing: .06em;
+  }
+
+  /* ── TEMP CARD special ─────────────────────── */
+  .card--temp .card-value { color: #0284c7; }
+  .card--humidity .card-value { color: #6366f1; }
+  .card--pressure .card-value { color: #059669; }
+  .card--wind .card-value { color: #d97706; }
+  .card--rain .card-value { color: #2563eb; }
+  .card--uv .card-value { color: #ea580c; }
+
+  /* ── THERMOMETER visual ─────────────────────── */
+  .thermo-wrap {
+    display: flex; align-items: flex-end; gap: 1rem;
+  }
+  .thermo {
+    width: 18px; height: 90px;
+    background: var(--dim);
+    border-radius: 9px;
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .thermo-fill {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    border-radius: 9px;
+    transition: height 1s ease;
+    background: linear-gradient(to top, #ef4444, #f59e0b, var(--accent));
+  }
+
+  /* ── WIND COMPASS ─────────────────────────── */
+  .compass-wrap { display: flex; align-items: center; gap: 1rem; }
+  .compass {
+    width: 60px; height: 60px;
+    border: 2px solid var(--border); border-radius: 50%;
+    position: relative; flex-shrink: 0;
+  }
+  .compass-needle {
+    position: absolute; top: 50%; left: 50%;
+    width: 3px; height: 24px;
+    background: linear-gradient(to bottom, var(--amber), transparent);
+    border-radius: 2px;
+    transform-origin: bottom center;
+    transform: translate(-50%, -100%) rotate(var(--deg, 0deg));
+    transition: transform 1s ease;
+  }
+  .compass-center {
+    position: absolute; top: 50%; left: 50%;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--amber);
+    transform: translate(-50%,-50%);
+  }
+  .compass-n {
+    position: absolute; top: 3px; left: 50%;
+    transform: translateX(-50%);
+    font-size: .55rem; font-family: var(--font-d);
+    color: var(--muted);
+  }
+
+  /* ── HUMIDITY ARC ─────────────────────────── */
+  .arc-svg { width: 70px; height: 40px; flex-shrink: 0; }
+
+  /* ── GRID BOTTOM ─────────────────────────── */
+  .secondary-row {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  @media(max-width:700px){ .secondary-row { grid-template-columns: 1fr 1fr; } }
+  @media(max-width:420px){ .secondary-row { grid-template-columns: 1fr; } }
+
+  /* ── FULLSCREEN OVERLAY ─────────────────── */
+  .overlay {
+    position: fixed; inset: 0; z-index: 100;
+    background: rgba(240,244,248,.98);
+    display: flex; flex-direction: column;
+    opacity: 0; pointer-events: none;
+    transition: opacity .3s;
+  }
+  .overlay.open { opacity: 1; pointer-events: all; }
+
+  .overlay-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .overlay-title {
+    font-family: var(--font-d);
+    font-size: 1.1rem; font-weight: 700;
+    letter-spacing: -.01em;
+  }
+  .overlay-meta { font-size: .78rem; color: var(--muted); margin-top: .15rem; }
+
+  .btn-close {
+    background: var(--border); border: none; color: var(--text);
+    width: 36px; height: 36px; border-radius: 8px;
+    cursor: pointer; font-size: 1.1rem;
+    display: grid; place-items: center;
+    transition: background .2s;
+  }
+  .btn-close:hover { background: var(--dim); }
+
+  .overlay-body {
+    flex: 1;
+    display: flex; flex-direction: column;
+    padding: 2rem;
+    overflow: hidden;
+  }
+
+  .range-tabs {
+    display: flex; gap: .5rem; margin-bottom: 1.5rem;
+  }
+  .range-tab {
+    padding: .4rem .9rem;
+    border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted);
+    font-family: var(--font-d); font-size: .72rem;
+    cursor: pointer; transition: all .2s; letter-spacing: .05em;
+  }
+  .range-tab.active, .range-tab:hover {
+    border-color: var(--accent); color: var(--accent);
+    background: rgba(56,189,248,.07);
+  }
+
+  .chart-container {
+    flex: 1; position: relative; min-height: 0;
+  }
+  #chart-svg {
+    width: 100%; height: 100%;
+    display: block;
+  }
+
+  .chart-stats {
+    display: flex; gap: 2rem; margin-top: 1.5rem;
+    padding-top: 1rem; border-top: 1px solid var(--border);
+  }
+  .stat-item { }
+  .stat-val { font-family: var(--font-d); font-size: 1.4rem; font-weight: 700; }
+  .stat-lbl { font-size: .72rem; color: var(--muted); margin-top: .1rem; font-family: var(--font-d); }
+
+  /* ── TOOLTIP ───────────────────────────── */
+  .chart-tooltip {
+    position: absolute; pointer-events: none;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    padding: .5rem .75rem;
+    font-family: var(--font-d);
+    font-size: .75rem;
+    opacity: 0; transition: opacity .15s;
+    white-space: nowrap;
+    box-shadow: 0 4px 16px rgba(0,0,0,.1);
+  }
+  .tt-val { font-size: 1rem; font-weight: 700; color: var(--accent); }
+  .tt-time { color: var(--muted); font-size: .7rem; }
+
+  .crosshair-line {
+    position: absolute; top: 0; bottom: 0; width: 1px;
+    background: var(--accent); opacity: 0;
+    pointer-events: none; transition: opacity .15s;
+  }
+
+  /* ── FOOTER ─────────────────────────────── */
+  footer {
+    text-align: center; padding: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: .72rem; color: var(--muted);
+    font-family: var(--font-d);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🌩</div>
+    <div>
+      <h1>Meteo Stanice</h1>
+      <span>Havířov · 48.82°N 18.43°E · 287 m n.m.</span>
+    </div>
+  </div>
+  <div class="header-meta">
+    <div><span class="status-dot"></span>Online · Aktualizace každých 5 min</div>
+    <div id="clock">—</div>
+  </div>
+</header>
+
+<main>
+  <div class="section-label">Aktuální podmínky</div>
+
+  <!-- Hero cards -->
+  <div class="hero-row">
+
+    <!-- TEPLOTA -->
+    <div class="card card--temp" onclick="openOverlay('temp')">
+      <div class="card-header">
+        <span class="card-label">Teplota vzduchu</span>
+        <div class="card-icon" style="background:rgba(2,132,199,.1)">🌡️</div>
+      </div>
+      <div class="thermo-wrap">
+        <div class="thermo"><div class="thermo-fill" id="thermo-fill" style="height:58%"></div></div>
+        <div>
+          <div class="card-value">18.4<sup>°C</sup></div>
+          <div class="card-sub">Pocitově 16.1 °C &nbsp;·&nbsp; Rosný bod 10.2 °C</div>
+        </div>
+      </div>
+      <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="g-temp" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#38bdf8" stop-opacity=".4"/>
+            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path class="area" d="M0,38 C20,36 30,30 50,28 S80,20 100,18 S140,12 160,10 S185,8 200,6 L200,40 L0,40 Z" fill="url(#g-temp)"/>
+        <path d="M0,38 C20,36 30,30 50,28 S80,20 100,18 S140,12 160,10 S185,8 200,6" stroke="#38bdf8" stroke-width="1.5"/>
+      </svg>
+      <span class="expand-hint">↗ Zobrazit graf</span>
+    </div>
+
+    <!-- VLHKOST -->
+    <div class="card card--humidity" onclick="openOverlay('humidity')">
+      <div class="card-header">
+        <span class="card-label">Relativní vlhkost</span>
+        <div class="card-icon" style="background:rgba(99,102,241,.1)">💧</div>
+      </div>
+      <div class="thermo-wrap">
+        <svg class="arc-svg" viewBox="0 0 70 38">
+          <path d="M5,35 A30,30 0 0,1 65,35" fill="none" stroke="#1e2f50" stroke-width="6" stroke-linecap="round"/>
+          <path d="M5,35 A30,30 0 0,1 65,35" fill="none" stroke="#6366f1" stroke-width="6" stroke-linecap="round"
+            stroke-dasharray="94.2" stroke-dashoffset="30" id="humidity-arc"/>
+          <text x="35" y="38" text-anchor="middle" font-family="Space Mono" font-size="9" fill="#6366f1">68%</text>
+        </svg>
+        <div>
+          <div class="card-value">68<sup>%</sup></div>
+          <div class="card-sub">Comfortable · Trend: ↘ klesá</div>
+        </div>
+      </div>
+      <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="g-hum" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#6366f1" stop-opacity=".4"/>
+            <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path class="area" d="M0,10 C20,12 40,20 60,18 S100,24 120,22 S160,18 180,20 S195,22 200,24 L200,40 L0,40 Z" fill="url(#g-hum)"/>
+        <path d="M0,10 C20,12 40,20 60,18 S100,24 120,22 S160,18 180,20 S195,22 200,24" stroke="#6366f1" stroke-width="1.5"/>
+      </svg>
+      <span class="expand-hint">↗ Zobrazit graf</span>
+    </div>
+
+    <!-- TLAK -->
+    <div class="card card--pressure" onclick="openOverlay('pressure')">
+      <div class="card-header">
+        <span class="card-label">Atmosferický tlak</span>
+        <div class="card-icon" style="background:rgba(5,150,105,.1)">🧭</div>
+      </div>
+      <div class="card-value">1018<sup style="font-size:.9rem">hPa</sup></div>
+      <div class="card-sub">Stabilní · Vítr z JZ</div>
+      <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="g-pre" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#10b981" stop-opacity=".4"/>
+            <stop offset="100%" stop-color="#10b981" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path class="area" d="M0,20 C30,18 50,22 80,20 S110,16 140,18 S170,20 190,19 L200,19 L200,40 L0,40 Z" fill="url(#g-pre)"/>
+        <path d="M0,20 C30,18 50,22 80,20 S110,16 140,18 S170,20 190,19 L200,19" stroke="#10b981" stroke-width="1.5"/>
+      </svg>
+      <span class="expand-hint">↗ Zobrazit graf</span>
+    </div>
+
+  </div>
+
+  <div class="section-label">Vítr, srážky &amp; ostatní</div>
+
+  <!-- Secondary cards -->
+  <div class="secondary-row">
+
+    <!-- VÍTR -->
+    <div class="card card--wind" onclick="openOverlay('wind')">
+      <div class="card-header">
+        <span class="card-label">Rychlost větru</span>
+        <div class="card-icon" style="background:rgba(217,119,6,.1)">💨</div>
+      </div>
+      <div class="compass-wrap">
+        <div class="compass">
+          <span class="compass-n">S</span>
+          <div class="compass-needle" style="--deg:225deg"></div>
+          <div class="compass-center"></div>
+        </div>
+        <div>
+          <div class="card-value" style="font-size:2.2rem">12.4<sup style="font-size:.9rem">km/h</sup></div>
+          <div class="card-sub">JZ · Poryvy 21 km/h</div>
+        </div>
+      </div>
+      <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" style="margin-top:.75rem">
+        <defs>
+          <linearGradient id="g-wind" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#d97706" stop-opacity=".4"/>
+            <stop offset="100%" stop-color="#d97706" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path class="area" d="M0,30 C15,25 25,20 40,22 S60,10 80,8 S100,14 120,18 S150,25 170,20 S185,15 200,12 L200,40 L0,40 Z" fill="url(#g-wind)"/>
+        <path d="M0,30 C15,25 25,20 40,22 S60,10 80,8 S100,14 120,18 S150,25 170,20 S185,15 200,12" stroke="#d97706" stroke-width="1.5"/>
+      </svg>
+      <span class="expand-hint">↗ Zobrazit graf</span>
+    </div>
+
+    <!-- SRÁŽKY -->
+    <div class="card card--rain" onclick="openOverlay('rain')">
+      <div class="card-header">
+        <span class="card-label">Srážky (24 h)</span>
+        <div class="card-icon" style="background:rgba(37,99,235,.1)">🌧️</div>
+      </div>
+      <div class="card-value" style="font-size:2.2rem; color:#2563eb">3.2<sup style="font-size:.9rem">mm</sup></div>
+      <div class="card-sub">Intenzita: 0.0 mm/h · Měsíc: 41 mm</div>
+      <svg class="sparkline" viewBox="0 0 200 40" preserveAspectRatio="none" style="margin-top:.75rem">
+        <defs>
+          <linearGradient id="g-rain" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#2563eb" stop-opacity=".5"/>
+            <stop offset="100%" stop-color="#2563eb" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path class="area" d="M0,38 L40,38 L40,28 L60,28 L60,38 L100,38 L100,20 L120,20 L120,38 L160,38 L160,32 L180,32 L180,38 L200,38 Z" fill="url(#g-rain)"/>
+        <path d="M0,38 L40,38 L40,28 L60,28 L60,38 L100,38 L100,20 L120,20 L120,38 L160,38 L160,32 L180,32 L180,38" stroke="#2563eb" stroke-width="1.5"/>
+      </svg>
+      <span class="expand-hint">↗ Zobrazit graf</span>
+    </div>
+
+    <!-- UV INDEX -->
+    <div class="card card--uv" onclick="openOverlay('uv')">
+      <div class="card-header">
+        <span class="card-label">UV Index</span>
+        <div class="card-icon" style="background:rgba(234,88,12,.1)">☀️</div>
+      </div>
+      <div class="card-value" style="font-size:2.2rem; color:#ea580c">4.1</div>
+      <div class="card-sub">Střední · Ochrana doporučena</div>
+      <div style="margin-top:.75rem; height: 8px; background: var(--dim); border-radius:4px; overflow:hidden">
+        <div style="height:100%; width:37%; background: linear-gradient(90deg,#10b981,#f59e0b,#ef4444); border-radius:4px;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.6rem;color:var(--muted);font-family:var(--font-d);margin-top:.25rem">
+        <span>0</span><span>Nízký</span><span>Střední</span><span>Vysoký</span><span>11+</span>
+      </div>
+      <span class="expand-hint">↗ Zobrazit graf</span>
+    </div>
+
+  </div>
+</main>
+
+<footer>
+  Meteo Stanice Havířov &nbsp;·&nbsp; Data demonstrační &nbsp;·&nbsp; Stanice spuštěna 2024 &nbsp;·&nbsp; v1.0
+</footer>
+
+<!-- ──── FULLSCREEN OVERLAY ──── -->
+<div class="overlay" id="overlay">
+  <div class="overlay-header">
+    <div>
+      <div class="overlay-title" id="ov-title">—</div>
+      <div class="overlay-meta" id="ov-meta">—</div>
+    </div>
+    <button class="btn-close" onclick="closeOverlay()">✕</button>
+  </div>
+  <div class="overlay-body">
+    <div class="range-tabs" id="range-tabs">
+      <button class="range-tab active" onclick="setRange(this,'6h')">6 h</button>
+      <button class="range-tab" onclick="setRange(this,'24h')">24 h</button>
+      <button class="range-tab" onclick="setRange(this,'7d')">7 dní</button>
+      <button class="range-tab" onclick="setRange(this,'30d')">30 dní</button>
+    </div>
+    <div class="chart-container">
+      <svg id="chart-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="chart-tooltip" id="chart-tooltip">
+        <div class="tt-val" id="tt-val">—</div>
+        <div class="tt-time" id="tt-time">—</div>
+      </div>
+      <div class="crosshair-line" id="crosshair"></div>
+    </div>
+    <div class="chart-stats" id="chart-stats">
+      <div class="stat-item"><div class="stat-val" id="s-min">—</div><div class="stat-lbl">MIN</div></div>
+      <div class="stat-item"><div class="stat-val" id="s-max">—</div><div class="stat-lbl">MAX</div></div>
+      <div class="stat-item"><div class="stat-val" id="s-avg">—</div><div class="stat-lbl">PRŮMĚR</div></div>
+      <div class="stat-item"><div class="stat-val" id="s-now">—</div><div class="stat-lbl">NYNÍ</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CLOCK ───────────────────────────────────────
+function updateClock(){
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toLocaleDateString('cs-CZ',{weekday:'short',day:'numeric',month:'long'}) +
+    ' · ' + now.toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+updateClock(); setInterval(updateClock, 1000);
+
+// ─── DATA GENERATORS ─────────────────────────────
+const CONFIGS = {
+  temp:     { label:'Teplota vzduchu', unit:'°C',   color:'#0284c7', base:18,  amp:6,   noise:.8 },
+  humidity: { label:'Relativní vlhkost', unit:'%',  color:'#6366f1', base:68,  amp:15,  noise:2  },
+  pressure: { label:'Atm. tlak',       unit:' hPa', color:'#059669', base:1018,amp:8,   noise:.5 },
+  wind:     { label:'Rychlost větru',  unit:' km/h',color:'#d97706', base:12,  amp:10,  noise:2  },
+  rain:     { label:'Srážky',          unit:' mm',  color:'#2563eb', base:0,   amp:3,   noise:.3 },
+  uv:       { label:'UV Index',        unit:'',     color:'#ea580c', base:4,   amp:4,   noise:.3 },
+};
+
+function generateData(key, points){
+  const c = CONFIGS[key];
+  const data = [];
+  let v = c.base;
+  for(let i=0; i<points; i++){
+    v += (Math.random()-.48)*c.noise + Math.sin(i/points*Math.PI*2)*c.amp*.05;
+    v = Math.max(0, Math.round(v*10)/10);
+    data.push(v);
+  }
+  return data;
+}
+
+function generateLabels(range){
+  const now = new Date(); const labels = [];
+  if(range==='6h'){
+    for(let i=71;i>=0;i--){ const d=new Date(now-i*5*60000);
+      labels.push(d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')); }
+  } else if(range==='24h'){
+    for(let i=287;i>=0;i--){ const d=new Date(now-i*5*60000);
+      labels.push(d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')); }
+  } else if(range==='7d'){
+    for(let i=167;i>=0;i--){ const d=new Date(now-i*3600000);
+      labels.push(d.toLocaleDateString('cs-CZ',{weekday:'short'})+' '+d.getHours()+'h'); }
+  } else {
+    for(let i=719;i>=0;i--){ const d=new Date(now-i*3600000);
+      labels.push(d.toLocaleDateString('cs-CZ',{day:'numeric',month:'numeric'})+' '+d.getHours()+'h'); }
+  }
+  return labels;
+}
+
+function pointsForRange(r){ return {' 6h':72,'24h':288,'7d':168,'30d':720}[r]||72; }
+
+// ─── OVERLAY STATE ───────────────────────────────
+let currentKey = null;
+let currentRange = '6h';
+let chartData = [], chartLabels = [];
+
+function openOverlay(key){
+  currentKey = key;
+  const c = CONFIGS[key];
+  document.getElementById('ov-title').textContent = c.label;
+  document.getElementById('ov-meta').textContent = 'Havířov · 48.82°N 18.43°E';
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  currentRange = '6h';
+  document.querySelectorAll('.range-tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  loadChart();
+}
+function closeOverlay(){
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeOverlay(); });
+
+function setRange(el, range){
+  document.querySelectorAll('.range-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  currentRange = range;
+  loadChart();
+}
+
+// ─── CHART RENDERER ──────────────────────────────
+function loadChart(){
+  const key = currentKey;
+  const c = CONFIGS[key];
+  const pts = pointsForRange(currentRange);
+  chartData = generateData(key, pts);
+  chartLabels = generateLabels(currentRange);
+
+  // stats
+  const mn = Math.min(...chartData), mx = Math.max(...chartData);
+  const avg = (chartData.reduce((a,b)=>a+b,0)/chartData.length).toFixed(1);
+  document.getElementById('s-min').textContent = mn + c.unit;
+  document.getElementById('s-max').textContent = mx + c.unit;
+  document.getElementById('s-avg').textContent = avg + c.unit;
+  document.getElementById('s-now').textContent = chartData[chartData.length-1] + c.unit;
+  document.getElementById('s-min').style.color = c.color;
+  document.getElementById('s-max').style.color = c.color;
+  document.getElementById('s-avg').style.color = c.color;
+  document.getElementById('s-now').style.color = c.color;
+
+  renderSVGChart(chartData, chartLabels, c.color, c.unit, mn, mx);
+}
+
+function renderSVGChart(data, labels, color, unit, mn, mx){
+  const svg = document.getElementById('chart-svg');
+  const W = svg.clientWidth || svg.parentElement.clientWidth || 900;
+  const H = svg.clientHeight || svg.parentElement.clientHeight || 340;
+  const PAD = { top:30, right:20, bottom:48, left:58 };
+  const iW = W - PAD.left - PAD.right;
+  const iH = H - PAD.top - PAD.bottom;
+
+  // subsample labels for readability
+  const maxTicks = Math.floor(iW/70);
+  const step = Math.max(1, Math.floor(data.length/maxTicks));
+
+  const xScale = i => PAD.left + (i/(data.length-1))*iW;
+  const yRange = mx - mn || 1;
+  const yScale = v => PAD.top + iH - ((v - mn)/yRange)*iH;
+
+  // build path
+  let d = '', da = `M${xScale(0)},${H-PAD.bottom}`;
+  data.forEach((v,i)=>{
+    const x=xScale(i), y=yScale(v);
+    if(i===0){ d=`M${x},${y}`; da+=` L${x},${y}`; }
+    else { d+=` L${x},${y}`; da+=` L${x},${y}`; }
+  });
+  da += ` L${xScale(data.length-1)},${H-PAD.bottom} Z`;
+
+  const gradId = 'cg_'+color.replace('#','');
+
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${color}" stop-opacity=".35"/>
+        <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+      </linearGradient>
+      <filter id="glow">
+        <feGaussianBlur stdDeviation="2.5" result="blur"/>
+        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      </filter>
+    </defs>
+
+    <!-- grid lines -->
+    ${Array.from({length:5},(_,i)=>{
+      const y = PAD.top + (i/4)*iH;
+      const val = (mx - (i/4)*yRange).toFixed(1);
+      return `<line x1="${PAD.left}" y1="${y}" x2="${W-PAD.right}" y2="${y}"
+        stroke="#dde3ec" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="${PAD.left-8}" y="${y+4}" text-anchor="end"
+          font-family="Space Mono,monospace" font-size="11" fill="#64748b">${val}</text>`;
+    }).join('')}
+
+    <!-- x axis labels -->
+    ${data.map((v,i)=>{
+      if(i % step !== 0) return '';
+      const x = xScale(i);
+      return `<text x="${x}" y="${H-PAD.bottom+18}" text-anchor="middle"
+        font-family="Space Mono,monospace" font-size="9.5" fill="#94a3b8"
+        transform="rotate(-30,${x},${H-PAD.bottom+18})">${labels[i]||''}</text>`;
+    }).join('')}
+
+    <!-- area fill -->
+    <path d="${da}" fill="url(#${gradId})"/>
+
+    <!-- line -->
+    <path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" filter="url(#glow)"/>
+
+    <!-- last point dot -->
+    <circle cx="${xScale(data.length-1)}" cy="${yScale(data[data.length-1])}" r="4"
+      fill="${color}" stroke="#ffffff" stroke-width="2"/>
+
+    <!-- invisible hover rect -->
+    <rect id="hover-zone" x="${PAD.left}" y="${PAD.top}" width="${iW}" height="${iH}"
+      fill="transparent" style="cursor:crosshair"/>
+  `;
+
+  // store for hover
+  svg._meteo = { data, labels, xScale, yScale, PAD, W, H, color, unit };
+
+  const hoverZone = document.getElementById('hover-zone');
+  hoverZone.addEventListener('mousemove', onChartHover);
+  hoverZone.addEventListener('mouseleave', ()=>{
+    document.getElementById('chart-tooltip').style.opacity = '0';
+    document.getElementById('crosshair').style.opacity = '0';
+  });
+}
+
+function onChartHover(e){
+  const svg = document.getElementById('chart-svg');
+  const m = svg._meteo; if(!m) return;
+  const rect = svg.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const iW = (m.W||rect.width) - m.PAD.left - m.PAD.right;
+  const idx = Math.round(((mx - m.PAD.left)/iW)*(m.data.length-1));
+  if(idx<0||idx>=m.data.length) return;
+  const val = m.data[idx];
+  const lbl = m.labels[idx]||'';
+  const x = m.xScale(idx);
+  const y = m.yScale(val);
+
+  const tt = document.getElementById('chart-tooltip');
+  const cr = document.getElementById('crosshair');
+  document.getElementById('tt-val').textContent = val + m.unit;
+  document.getElementById('tt-time').textContent = lbl;
+  document.getElementById('tt-val').style.color = m.color;
+
+  const ttW = 110, ttH = 52;
+  let tx = e.clientX - rect.left + 14;
+  if(tx + ttW > rect.width - 8) tx = e.clientX - rect.left - ttW - 14;
+  tt.style.left = tx + 'px';
+  tt.style.top = Math.max(0, y - ttH/2) + 'px';
+  tt.style.borderColor = m.color;
+  tt.style.opacity = '1';
+
+  cr.style.left = x + 'px';
+  cr.style.opacity = '.5';
+  cr.style.background = m.color;
+}
+
+// re-render on resize
+let resizeTimer;
+window.addEventListener('resize', ()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(()=>{ if(currentKey) loadChart(); },200);
+});
+</script>
+</body>
+</html>
